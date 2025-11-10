@@ -1,0 +1,23 @@
+{
+  "manifest_version": 1,
+  "name": "Card Effort",
+  "description": "Adds Estimated and Actual Effort fields to cards and provides a summary report per list.",
+  "author": "Novaspark Limited (+AI)",
+  "capabilities": [
+    "card-back-section",
+    "list-actions"
+  ],
+  "connectors": {
+    "iframe": {
+      "url": "./index.html"
+    }
+  },
+  "icon": {
+    "url": "https://cdn-icons-png.flaticon.com/512/1828/1828640.png"
+  },
+  "permissions": {
+    "board": "read",
+    "card": "read",
+    "write": true
+  }
+}
