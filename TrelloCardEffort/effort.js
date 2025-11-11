@@ -6,9 +6,9 @@ const t = TrelloPowerUp.iframe();
 t.render(function () {
   const container = document.getElementById('content');
 
-  const est = t.get('card', 'shared', 'estimatedEffort') || '';
-  const act = t.get('card', 'shared', 'actualEffort') || '';
-
+  var est = t.get('card', 'shared', 'estimatedEffort').then(function(e) {return e || '';});
+  var act = t.get('card', 'shared', 'actualEffort').then(function(e) {return e || '';});
+  
   container.innerHTML = `
     <label>Estimated Effort (hours):
       <input type="number" id="est" value="${est}" />
