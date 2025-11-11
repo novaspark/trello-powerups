@@ -6,7 +6,7 @@ TrelloPowerUp.initialize({
   'card-back-section': function(t, options) {
     return {
       title: 'Effort Tracking',
-      icon: 'https://cdn-icons-png.flaticon.com/512/1828/1828640.png',
+      icon: 'https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4da2-8827-4bc6e88b7618%2Ficon-gray.svg',
       content: {
         type: 'iframe',
         url: t.signUrl('./index.html?mode=card'),
