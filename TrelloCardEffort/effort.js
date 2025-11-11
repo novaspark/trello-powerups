@@ -24,11 +24,7 @@ t.render(function () {
     const newEst = parseFloat(document.getElementById('est').value || 0);
     const newAct = parseFloat(document.getElementById('act').value || 0);
 
-    return t.set('card', 'shared', 'estimatedEffort', newEst)
-      .then(function () {
-
-        t.closePopup();
-
-      });
+    t.set('card', 'shared', 'estimatedEffort', newEst);
+    t.set('card', 'shared', 'actualEffort', newAct);    
   });
 });
