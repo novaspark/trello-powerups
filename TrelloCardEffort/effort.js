@@ -2,21 +2,6 @@
 
 const t = TrelloPowerUp.iframe();
 
-// === CARD MODE ===
-
-
-document.getElementById('save').addEventListener('click', function (evt) {
-  evt.preventDefault();
-  const newEst = parseFloat(document.getElementById('est').value || 0);
-  const newAct = parseFloat(document.getElementById('act').value || 0);
-
-  return t.set('card', 'shared', 'estimatedEffort', newEst)
-    .then(function () {
-
-      t.closePopup();
-
-    });
-});
 
 t.render(function () {
   const container = document.getElementById('content');
@@ -33,4 +18,17 @@ t.render(function () {
     </label>
     <button id="save">Save</button>
   `;
+
+  document.getElementById('save').addEventListener('click', function (evt) {
+    evt.preventDefault();
+    const newEst = parseFloat(document.getElementById('est').value || 0);
+    const newAct = parseFloat(document.getElementById('act').value || 0);
+
+    return t.set('card', 'shared', 'estimatedEffort', newEst)
+      .then(function () {
+
+        t.closePopup();
+
+      });
+  });
 });
