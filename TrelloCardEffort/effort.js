@@ -4,7 +4,7 @@ const t = TrelloPowerUp.iframe();
 
 // === CARD MODE ===
 
-const card = await t.card('id', 'name', 'shared');
+const card = t.card('id', 'name', 'shared');
 const container = document.getElementById('content');
 
 const est = card.shared.estimatedEffort || '';
@@ -20,15 +20,11 @@ container.innerHTML = `
     <button id="save">Save</button>
   `;
 
-document.getElementById('save').addEventListener('click', function(evt) {
-  evt.preventDefault();
+document.getElementById('save').addEventListener('click', async () => {
   const newEst = parseFloat(document.getElementById('est').value || 0);
   const newAct = parseFloat(document.getElementById('act').value || 0);
 
-  t.set('card', 'shared', 'estimatedEffort', newEst).then(function() {
-    t.set('card', 'shared', 'actualEffort', newAct).then(function() {
-      t.closePopup();
-    });
-  });
-  
+  await t.set('card', 'shared', 'estimatedEffort', newEst);
+  await t.set('card', 'shared', 'actualEffort', newAct);
+  t.closePopup();
 });
