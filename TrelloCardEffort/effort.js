@@ -24,9 +24,10 @@ document.getElementById('save').addEventListener('click', function (evt) {
   const newEst = parseFloat(document.getElementById('est').value || 0);
   const newAct = parseFloat(document.getElementById('act').value || 0);
 
-  t.set('card', 'shared', 'estimatedEffort', newEst).then(function () {
-    t.set('card', 'shared', 'actualEffort', newAct).then(function () {
+  return t.set('card', 'shared', 'estimatedEffort', newEst)
+    .then(function () {
+
       t.closePopup();
+
     });
-  });
 });
