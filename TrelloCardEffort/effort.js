@@ -19,11 +19,14 @@ container.innerHTML = `
     <button id="save">Save</button>
   `;
 
-document.getElementById('save').addEventListener('click', async () => {
+document.getElementById('save').addEventListener('click', function (evt) {
+  evt.preventDefault();
   const newEst = parseFloat(document.getElementById('est').value || 0);
   const newAct = parseFloat(document.getElementById('act').value || 0);
 
-  await t.set('card', 'shared', 'estimatedEffort', newEst);
-  await t.set('card', 'shared', 'actualEffort', newAct);
-  t.closePopup();
+  t.set('card', 'shared', 'estimatedEffort', newEst).then(function () {
+    t.set('card', 'shared', 'actualEffort', newAct).then(function () {
+      t.closePopup();
+    });
+  });
 });
