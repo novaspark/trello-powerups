@@ -6,7 +6,10 @@ const t = TrelloPowerUp.iframe();
 t.render(function () {
   const container = document.getElementById('content');
 
-  var est = t.get('card', 'shared', 'estimatedEffort').then(function(e) {return e || '';});
+  var est = t.get('card', 'shared', 'estimatedEffort').then(function(e) {
+    console.log(e);
+    return e || '';
+  });
   var act = t.get('card', 'shared', 'actualEffort').then(function(e) {return e || '';});
   
   container.innerHTML = `
