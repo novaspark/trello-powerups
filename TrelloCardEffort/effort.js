@@ -4,20 +4,6 @@ const t = TrelloPowerUp.iframe();
 
 // === CARD MODE ===
 
-const container = document.getElementById('content');
-
-const est = t.get('card', 'shared', 'estimatedEffort') || '';
-const act = t.get('card', 'shared', 'actualEffort') || '';
-
-container.innerHTML = `
-    <label>Estimated Effort (hours):
-      <input type="number" id="est" value="${est}" />
-    </label>
-    <label>Actual Effort (hours):
-      <input type="number" id="act" value="${act}" />
-    </label>
-    <button id="save">Save</button>
-  `;
 
 document.getElementById('save').addEventListener('click', function (evt) {
   evt.preventDefault();
@@ -30,4 +16,21 @@ document.getElementById('save').addEventListener('click', function (evt) {
       t.closePopup();
 
     });
+});
+
+t.render(function () {
+  const container = document.getElementById('content');
+
+  const est = t.get('card', 'shared', 'estimatedEffort') || '';
+  const act = t.get('card', 'shared', 'actualEffort') || '';
+
+  container.innerHTML = `
+    <label>Estimated Effort (hours):
+      <input type="number" id="est" value="${est}" />
+    </label>
+    <label>Actual Effort (hours):
+      <input type="number" id="act" value="${act}" />
+    </label>
+    <button id="save">Save</button>
+  `;
 });
