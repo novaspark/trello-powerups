@@ -4,11 +4,10 @@ const t = TrelloPowerUp.iframe();
 
 // === CARD MODE ===
 
-const card = t.card('id', 'name', 'shared');
 const container = document.getElementById('content');
 
-const est = card.shared.estimatedEffort || '';
-const act = card.shared.actualEffort || '';
+const est = t.get('card', 'shared', 'estimatedEffort') || '';
+const act = t.get('card', 'shared', 'actualEffort') || '';
 
 container.innerHTML = `
     <label>Estimated Effort (hours):
