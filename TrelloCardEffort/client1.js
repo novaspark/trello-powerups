@@ -25,10 +25,10 @@ TrelloPowerUp.initialize({
     'card-back-section': function (t, options) {
         return {
             title: 'Effort Tracking',
-            icon: 'https://cdn.hyperdev.com/us-east-1%3A3d31b21c-01a0-4da2-8827-4bc6e88b7618%2Ficon-gray.svg',
+            icon: BLACK_ROCKET_ICON,
             content: {
                 type: 'iframe',
-                url: t.signUrl('./index.html?mode=card'),
+                url: t.signUrl('./effort.html'),
                 height: 200
             }
         };
