@@ -1,10 +1,11 @@
-{
+﻿{
   "manifest_version": 1,
-  "name": "Card Effort",
+  "name": "Effort Tracker",
   "description": "Adds Estimated and Actual Effort fields to cards and provides a summary report per list.",
-  "author": "Novaspark Limited (+AI)",
+  "author": "Novaspark Limited",
   "capabilities": [
-    "card-back-section",
+    "card-badges",
+    "card-detail-badges",
     "list-actions"
   ],
   "connectors": {
@@ -13,8 +14,9 @@
     }
   },
   "icon": {
-    "url": "https://cdn-icons-png.flaticon.com/512/1828/1828640.png"
+    "url": "https://www.novaspark.co.uk/Trello/EffortTracker/img/icon.png"
   },
+  "appKey": "b8689879d76dbda1e35b2284538ae174",
   "permissions": {
     "board": "read",
     "card": "read",

@@ -1,0 +1,46 @@
+﻿<html>
+<head>
+    <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css" />
+    <style>
+        form {
+            margin-block-end:0;
+        }
+        .form-wrapper {
+            display:flex;
+            flex-wrap:wrap;
+            column-gap: 5px;
+        }
+        .field {
+            width:45%;
+        }
+        .actions {
+            width:100%;
+            text-align:end;
+            padding-right: 19px;
+        }
+
+        .field input {
+            width:100%;
+        }
+    </style>
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+    <form id="effort">
+        <div class="form-wrapper">
+            <div class="field">
+                <label for="est">Estimate:</label>
+                <input name="est" id="est" />
+            </div>
+            <div class="field">
+                <label for="act">Actual:</label>
+                <input name="act" id="act" />
+            </div>
+            <div class="actions">
+                <button type="submit" class="mod-primary">Save</button>
+            </div>
+        </div>
+    </form>
+    <script src="effort.js"></script>
+</body>
+</html>
