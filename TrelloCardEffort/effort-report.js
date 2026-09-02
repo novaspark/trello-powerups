@@ -1,6 +1,9 @@
-var t = TrelloPowerUp.iframe();
-
 var APP_KEY = 'b8689879d76dbda1e35b2284538ae174';
+
+var t = TrelloPowerUp.iframe({
+    appKey: APP_KEY,
+    appName: 'Effort Tracker'
+});
 
 document.getElementById('apply').addEventListener('click', function () {
     renderReport(document.getElementById('from').value, document.getElementById('to').value);
@@ -19,7 +22,7 @@ t.render(function () {
 async function renderReport(fromStr, toStr) {
     const container = document.getElementById('container');
     const range = parseRange(fromStr, toStr);
-    container.textContent = 'Loading…';
+    container.textContent = 'Loading...';
 
     const list = await t.list('all');
 
@@ -28,32 +31,39 @@ async function renderReport(fromStr, toStr) {
     const token = range ? await getToken() : null;
 
     let totalEst = 0, totalAct = 0, rows = [], cards = [];
-    await Promise.all(list.cards.map(async (c) => {
-        let estDisplay, actDisplay, estNum, actNum;
+    try {
+        await Promise.all(list.cards.map(async (c) => {
+            let estDisplay, actDisplay, estNum, actNum;
 
-        if (range) {
-            const delta = await fetchEffortInRange(c.id, token, range);
-            estDisplay = estNum = delta.est;
-            actDisplay = actNum = delta.act;
-        } else {
-            const eff = await fetchCardEffort(c.id);
-            estDisplay = eff.est;
-            actDisplay = eff.act;
-            estNum = Number(eff.est) || 0;
-            actNum = Number(eff.act) || 0;
-        }
-
-        totalEst += estNum;
-        totalAct += actNum;
-        rows[rows.length] = `<tr><td>${c.name}</td><td>${estDisplay}</td><td>${actDisplay}</td></tr>`;
-        cards[cards.length] = {
-            name: c.name,
-            id: c.id,
-            shared: {
-                estimatedEffort: estDisplay, actualEffort: actDisplay
+            if (range) {
+                const delta = await fetchEffortInRange(c.id, token, range);
+                estDisplay = estNum = delta.est;
+                actDisplay = actNum = delta.act;
+            } else {
+                const eff = await fetchCardEffort(c.id);
+                estDisplay = eff.est;
+                actDisplay = eff.act;
+                estNum = Number(eff.est) || 0;
+                actNum = Number(eff.act) || 0;
             }
-        };
-    }));
+
+            totalEst += estNum;
+            totalAct += actNum;
+            rows[rows.length] = `<tr><td>${c.name}</td><td>${estDisplay}</td><td>${actDisplay}</td></tr>`;
+            cards[cards.length] = {
+                name: c.name,
+                id: c.id,
+                shared: {
+                    estimatedEffort: estDisplay, actualEffort: actDisplay
+                }
+            };
+        }));
+    } catch (err) {
+        console.error('Effort report failed:', err);
+        container.innerHTML = `<p style="color:#b04632">Could not build the report: ${err.message}</p>`;
+        t.sizeTo(450);
+        return;
+    }
 
     const title = range
         ? `${list.name} - Effort Summary (${range.fromLabel} to ${range.toLabel})`
@@ -84,8 +94,8 @@ function parseRange(fromStr, toStr) {
     const from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
     const to = toStr ? new Date(toStr + 'T23:59:59.999') : null;
     return {
-        fromLabel: fromStr || '…',
-        toLabel: toStr || '…',
+        fromLabel: fromStr || 'start',
+        toLabel: toStr || 'now',
         includes: function (date) {
             if (from && date < from) return false;
             if (to && date > to) return false;
@@ -112,24 +122,24 @@ async function fetchCardEffort(cardId) {
 // the range. Cards with no matching comments come back as { est: 0, act: 0 }.
 async function fetchEffortInRange(cardId, token, range) {
     let est = 0, act = 0;
-    try {
-        const res = await fetch(`https://api.trello.com/1/cards/${cardId}/actions?filter=commentCard&limit=1000&key=${APP_KEY}&token=${token}`);
-        const actions = await res.json();
-        for (const a of actions) {
-            const text = a.data && a.data.text;
-            if (!text || text.indexOf('Effort updated by') !== 0) continue;
-            if (!range.includes(new Date(a.date))) continue;
-            est += parseEffortDelta(text, 'Estimated');
-            act += parseEffortDelta(text, 'Actual');
-        }
-    } catch (err) {
-        console.error('Failed to read effort history for card', cardId, err);
+    const res = await fetch(`https://api.trello.com/1/cards/${cardId}/actions?filter=commentCard&limit=1000&key=${APP_KEY}&token=${token}`);
+    if (!res.ok) throw new Error(`Trello API returned ${res.status}`);
+    const actions = await res.json();
+    if (!Array.isArray(actions)) throw new Error('unexpected Trello API response');
+    for (const a of actions) {
+        const text = a.data && a.data.text;
+        if (!text || text.indexOf('Effort updated by') !== 0) continue;
+        if (!range.includes(new Date(a.date))) continue;
+        est += parseEffortDelta(text, 'Estimated');
+        act += parseEffortDelta(text, 'Actual');
     }
     return { est, act };
 }
 
 function parseEffortDelta(text, label) {
-    const match = text.match(new RegExp('- ' + label + ': (.+?) (?:→|->) (.+)'));
+    // "<label>: <old> <arrow> <new>" - the separator is matched as any
+    // non-space token so mis-encoded arrows in older comments still parse.
+    const match = text.match(new RegExp(label + ':\\s*(\\S+)\\s+\\S+\\s+(\\S+)'));
     if (!match) return 0;
     return toEffortNumber(match[2]) - toEffortNumber(match[1]);
 }

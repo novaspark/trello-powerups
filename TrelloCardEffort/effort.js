@@ -31,8 +31,8 @@ t.render(function () {
 
 async function postAuditComment(oldEff, newEff) {
     const changes = [];
-    if (newEff.est !== oldEff.est) changes.push(`- Estimated: ${oldEff.est || '-'} → ${newEff.est || '-'}`);
-    if (newEff.act !== oldEff.act) changes.push(`- Actual: ${oldEff.act || '-'} → ${newEff.act || '-'}`);
+    if (newEff.est !== oldEff.est) changes.push(`- Estimated: ${oldEff.est || '-'} -> ${newEff.est || '-'}`);
+    if (newEff.act !== oldEff.act) changes.push(`- Actual: ${oldEff.act || '-'} -> ${newEff.act || '-'}`);
     if (changes.length === 0) return;
 
     try {
