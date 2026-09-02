@@ -4,7 +4,7 @@
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 8px;
-    padding: 6px 0 12px 0;
+    padding: 6px 0 0 0;
 }
 
 .range-controls .field {
@@ -26,4 +26,6 @@
 .range-controls button {
     height: 32px;
     box-sizing: border-box;
+    /* match the default bottom margin the Trello stylesheet puts on inputs */
+    margin-bottom: 12px;
 }
