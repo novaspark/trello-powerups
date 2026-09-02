@@ -1,11 +1,38 @@
-﻿<html>
+<html>
 <head>
     <link rel="stylesheet" href="https://p.trellocdn.com/power-up.min.css" />
     <style>
+        .range-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            column-gap: 8px;
+            row-gap: 4px;
+            padding: 6px 0 10px 0;
+        }
+        .range-controls .field {
+            display: flex;
+            flex-direction: column;
+        }
+        .range-controls input {
+            width: 140px;
+        }
     </style>
     <script src="https://p.trellocdn.com/power-up.min.js"></script>
 </head>
 <body>
+    <div class="range-controls">
+        <div class="field">
+            <label for="from">From</label>
+            <input type="date" id="from" />
+        </div>
+        <div class="field">
+            <label for="to">To</label>
+            <input type="date" id="to" />
+        </div>
+        <button id="apply" class="mod-primary">Apply</button>
+        <button id="clear">Clear</button>
+    </div>
     <div id="container" style="padding: 0 0 10px 0; margin-block-end: 0;"></div>
     <script src="effort-report.js"></script>
 </body>
