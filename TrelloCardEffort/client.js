@@ -1,4 +1,20 @@
-﻿window.TrelloPowerUp.initialize({
+﻿var ICON = 'https://www.novaspark.co.uk/Trello/EffortTracker/img/icon.png';
+
+window.TrelloPowerUp.initialize({
+    "board-buttons": function (t, opts) {
+        return [{
+            icon: { dark: ICON, light: ICON },
+            text: "Effort report",
+            callback: function (t) {
+                return t.modal({
+                    title: "Board effort report",
+                    url: './board-report.html',
+                    fullscreen: false,
+                    accentColor: 'blue'
+                });
+            }
+        }];
+    },
     "card-badges": function (t, opts) {
         return t.get("card", "shared", "effort", "{\"est\":\"-\",\"act\":\"-\"}")
             .then(function (effort) {

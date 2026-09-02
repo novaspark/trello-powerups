@@ -4,6 +4,7 @@
   "description": "Adds Estimated and Actual Effort fields to cards and provides a summary report per list.",
   "author": "Novaspark Limited",
   "capabilities": [
+    "board-buttons",
     "card-badges",
     "card-detail-badges",
     "list-actions"

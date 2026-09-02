@@ -1,7 +1,5 @@
-var APP_KEY = 'b8689879d76dbda1e35b2284538ae174';
-
 var t = TrelloPowerUp.iframe({
-    appKey: APP_KEY,
+    appKey: 'b8689879d76dbda1e35b2284538ae174',
     appName: 'Effort Tracker'
 });
 
@@ -21,42 +19,23 @@ t.render(function () {
 
 async function renderReport(fromStr, toStr) {
     const container = document.getElementById('container');
-    const range = parseRange(fromStr, toStr);
+    const range = EffortLib.parseRange(fromStr, toStr);
     container.textContent = 'Loading...';
 
     const list = await t.list('all');
 
     // Effort within a range is reconstructed from the "Effort updated by..."
     // audit comments, which are only reachable through the REST API.
-    const token = range ? await getToken() : null;
+    const token = range ? await EffortLib.getToken(t) : null;
 
-    let totalEst = 0, totalAct = 0, rows = [], cards = [];
+    let totalEst = 0, totalAct = 0, rows = [], csvRows = [];
     try {
         await Promise.all(list.cards.map(async (c) => {
-            let estDisplay, actDisplay, estNum, actNum;
-
-            if (range) {
-                const delta = await fetchEffortInRange(c.id, token, range);
-                estDisplay = estNum = delta.est;
-                actDisplay = actNum = delta.act;
-            } else {
-                const eff = await fetchCardEffort(c.id);
-                estDisplay = eff.est;
-                actDisplay = eff.act;
-                estNum = Number(eff.est) || 0;
-                actNum = Number(eff.act) || 0;
-            }
-
-            totalEst += estNum;
-            totalAct += actNum;
-            rows[rows.length] = `<tr><td>${c.name}</td><td>${estDisplay}</td><td>${actDisplay}</td></tr>`;
-            cards[cards.length] = {
-                name: c.name,
-                id: c.id,
-                shared: {
-                    estimatedEffort: estDisplay, actualEffort: actDisplay
-                }
-            };
+            const eff = await EffortLib.resolveCardEffort(t, c.id, range, token);
+            totalEst += eff.estNum;
+            totalAct += eff.actNum;
+            rows[rows.length] = `<tr><td>${c.name}</td><td>${eff.estDisplay}</td><td>${eff.actDisplay}</td></tr>`;
+            csvRows[csvRows.length] = [c.name, eff.estDisplay || 0, eff.actDisplay || 0];
         }));
     } catch (err) {
         console.error('Effort report failed:', err);
@@ -69,7 +48,7 @@ async function renderReport(fromStr, toStr) {
         ? `${list.name} - Effort Summary (${range.fromLabel} to ${range.toLabel})`
         : `${list.name} - Effort Summary`;
 
-    const tableHtml =
+    container.innerHTML =
         `<h3>${title}</h3>
         <p>
           <strong>Total Estimated:</strong> ${totalEst} hours<br>
@@ -82,88 +61,13 @@ async function renderReport(fromStr, toStr) {
         <button id="exportCsv">Export to CSV</button>
       `;
 
-    container.innerHTML = tableHtml;
-
-    document.getElementById('exportCsv').addEventListener('click', () => exportToCSV(cards, list.name));
+    document.getElementById('exportCsv').addEventListener('click', function () {
+        EffortLib.downloadCsv(
+            ['Card Name', 'Estimated Effort', 'Actual Effort'],
+            csvRows,
+            `${list.name.replace(/\s+/g, '_')}_Effort_Report.csv`
+        );
+    });
 
     t.sizeTo(450);
-}
-
-function parseRange(fromStr, toStr) {
-    if (!fromStr && !toStr) return null;
-    const from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
-    const to = toStr ? new Date(toStr + 'T23:59:59.999') : null;
-    return {
-        fromLabel: fromStr || 'start',
-        toLabel: toStr || 'now',
-        includes: function (date) {
-            if (from && date < from) return false;
-            if (to && date > to) return false;
-            return true;
-        }
-    };
-}
-
-async function getToken() {
-    const restApi = await t.getRestApi();
-    if (!await restApi.isAuthorized()) {
-        await restApi.authorize({ scope: 'read,write', expiration: 'never' });
-    }
-    return restApi.getToken();
-}
-
-async function fetchCardEffort(cardId) {
-    var effort = await t.get(cardId, "shared", "effort");
-    var eff = JSON.parse(effort || "{\"est\":\"0\",\"act\":\"0\"}");
-    return eff;
-}
-
-// Sums the change to Estimate/Actual recorded by audit comments dated inside
-// the range. Cards with no matching comments come back as { est: 0, act: 0 }.
-async function fetchEffortInRange(cardId, token, range) {
-    let est = 0, act = 0;
-    const res = await fetch(`https://api.trello.com/1/cards/${cardId}/actions?filter=commentCard&limit=1000&key=${APP_KEY}&token=${token}`);
-    if (!res.ok) throw new Error(`Trello API returned ${res.status}`);
-    const actions = await res.json();
-    if (!Array.isArray(actions)) throw new Error('unexpected Trello API response');
-    for (const a of actions) {
-        const text = a.data && a.data.text;
-        if (!text || text.indexOf('Effort updated by') !== 0) continue;
-        if (!range.includes(new Date(a.date))) continue;
-        est += parseEffortDelta(text, 'Estimated');
-        act += parseEffortDelta(text, 'Actual');
-    }
-    return { est, act };
-}
-
-function parseEffortDelta(text, label) {
-    // "<label>: <old> <arrow> <new>" - the separator is matched as any
-    // non-space token so mis-encoded arrows in older comments still parse.
-    const match = text.match(new RegExp(label + ':\\s*(\\S+)\\s+\\S+\\s+(\\S+)'));
-    if (!match) return 0;
-    return toEffortNumber(match[2]) - toEffortNumber(match[1]);
-}
-
-function toEffortNumber(value) {
-    value = (value || '').trim();
-    if (value === '' || value === '-') return 0;
-    const n = Number(value);
-    return isNaN(n) ? 0 : n;
-}
-
-function exportToCSV(cards, listName) {
-    const header = ['Card Name', 'Estimated Effort', 'Actual Effort'];
-    const rows = cards.map(c => [
-        `"${c.name.replace(/"/g, '""')}"`,
-        c.shared.estimatedEffort || 0,
-        c.shared.actualEffort || 0
-    ]);
-
-    const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${listName.replace(/\s+/g, '_')}_Effort_Report.csv`;
-    link.click();
 }
