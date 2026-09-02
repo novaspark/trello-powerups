@@ -1,6 +1,7 @@
 // Shared helpers for the list-level and board-level effort reports.
 var EffortLib = (function () {
     var APP_KEY = 'b8689879d76dbda1e35b2284538ae174';
+    var ACTIONS_PAGE = 1000; // Trello's max page size for the actions endpoint
 
     // Returns null when no range is set, otherwise an object whose includes()
     // tests whether a Date falls within [from 00:00, to 23:59].
@@ -9,6 +10,7 @@ var EffortLib = (function () {
         var from = fromStr ? new Date(fromStr + 'T00:00:00') : null;
         var to = toStr ? new Date(toStr + 'T23:59:59.999') : null;
         return {
+            from: from,
             fromLabel: fromStr || 'start',
             toLabel: toStr || 'now',
             includes: function (date) {
@@ -27,30 +29,72 @@ var EffortLib = (function () {
         return restApi.getToken();
     }
 
-    async function fetchCardEffort(t, cardId) {
+    // Current stored effort for one card -> { estDisplay, actDisplay, estNum, actNum }.
+    async function currentEffort(t, cardId) {
         var effort = await t.get(cardId, 'shared', 'effort');
-        return JSON.parse(effort || '{"est":"0","act":"0"}');
+        var eff = JSON.parse(effort || '{"est":"0","act":"0"}');
+        return {
+            estDisplay: eff.est,
+            actDisplay: eff.act,
+            estNum: Number(eff.est) || 0,
+            actNum: Number(eff.act) || 0
+        };
     }
 
-    // Sums the change to Estimate/Actual recorded by "Effort updated by..."
-    // audit comments dated inside the range. Cards with no matching comments
-    // come back as { est: 0, act: 0 }.
-    async function fetchEffortInRange(cardId, token, range) {
-        var est = 0, act = 0;
-        var res = await fetch('https://api.trello.com/1/cards/' + cardId +
-            '/actions?filter=commentCard&limit=1000&key=' + APP_KEY + '&token=' + token);
-        if (!res.ok) throw new Error('Trello API returned ' + res.status);
-        var actions = await res.json();
-        if (!Array.isArray(actions)) throw new Error('unexpected Trello API response');
-        for (var i = 0; i < actions.length; i++) {
-            var a = actions[i];
-            var text = a.data && a.data.text;
-            if (!text || text.indexOf('Effort updated by') !== 0) continue;
-            if (!range.includes(new Date(a.date))) continue;
-            est += parseEffortDelta(text, 'Estimated');
-            act += parseEffortDelta(text, 'Actual');
+    // Effort logged within the range, for every card on the board, in a single
+    // paginated pass over the board's comment actions (one request per ~1000
+    // comments instead of one per card - which trips Trello's rate limit).
+    // Returns { <cardId>: { est, act } } for cards touched inside the window.
+    async function rangedEffortByCard(boardId, token, range) {
+        var byCard = {};
+        var before = '';
+        for (var page = 0; page < 50; page++) {
+            var url = 'https://api.trello.com/1/boards/' + boardId +
+                '/actions?filter=commentCard&limit=' + ACTIONS_PAGE +
+                '&key=' + APP_KEY + '&token=' + token +
+                (before ? '&before=' + before : '');
+            var actions = await getJsonWithRetry(url);
+            if (!actions.length) break;
+
+            for (var i = 0; i < actions.length; i++) {
+                var a = actions[i];
+                var text = a.data && a.data.text;
+                var cardId = a.data && a.data.card && a.data.card.id;
+                if (!text || !cardId || text.indexOf('Effort updated by') !== 0) continue;
+                if (!range.includes(new Date(a.date))) continue;
+                var cur = byCard[cardId] || { est: 0, act: 0 };
+                cur.est += parseEffortDelta(text, 'Estimated');
+                cur.act += parseEffortDelta(text, 'Actual');
+                byCard[cardId] = cur;
+            }
+
+            var oldest = new Date(actions[actions.length - 1].date);
+            if (actions.length < ACTIONS_PAGE) break;
+            if (range.from && oldest < range.from) break; // gone past the window
+            before = actions[actions.length - 1].id;
         }
-        return { est: est, act: act };
+        return byCard;
+    }
+
+    async function getJsonWithRetry(url, attempts) {
+        attempts = attempts || 4;
+        for (var i = 0; i < attempts; i++) {
+            var res = await fetch(url);
+            if (res.status === 429) {
+                var wait = Number(res.headers.get('Retry-After')) || Math.pow(2, i);
+                await sleep(wait * 1000);
+                continue;
+            }
+            if (!res.ok) throw new Error('Trello API returned ' + res.status);
+            var data = await res.json();
+            if (!Array.isArray(data)) throw new Error('unexpected Trello API response');
+            return data;
+        }
+        throw new Error('Trello API rate limit hit - try a narrower date range');
+    }
+
+    function sleep(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
     }
 
     function parseEffortDelta(text, label) {
@@ -68,21 +112,10 @@ var EffortLib = (function () {
         return isNaN(n) ? 0 : n;
     }
 
-    // Resolves one card to { estDisplay, actDisplay, estNum, actNum }. Without a
-    // range this is the current stored value; with a range it is the effort
-    // logged within the window.
-    async function resolveCardEffort(t, cardId, range, token) {
-        if (range) {
-            var delta = await fetchEffortInRange(cardId, token, range);
-            return { estDisplay: delta.est, actDisplay: delta.act, estNum: delta.est, actNum: delta.act };
-        }
-        var eff = await fetchCardEffort(t, cardId);
-        return {
-            estDisplay: eff.est,
-            actDisplay: eff.act,
-            estNum: Number(eff.est) || 0,
-            actNum: Number(eff.act) || 0
-        };
+    // Shapes a { est, act } delta (or missing) into the same fields as currentEffort().
+    function deltaToEffort(delta) {
+        var d = delta || { est: 0, act: 0 };
+        return { estDisplay: d.est, actDisplay: d.act, estNum: d.est, actNum: d.act };
     }
 
     function downloadCsv(header, rows, filename) {
@@ -103,7 +136,9 @@ var EffortLib = (function () {
     return {
         parseRange: parseRange,
         getToken: getToken,
-        resolveCardEffort: resolveCardEffort,
+        currentEffort: currentEffort,
+        rangedEffortByCard: rangedEffortByCard,
+        deltaToEffort: deltaToEffort,
         downloadCsv: downloadCsv
     };
 })();

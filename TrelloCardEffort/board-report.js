@@ -23,53 +23,60 @@ async function renderReport(fromStr, toStr) {
     container.textContent = 'Loading...';
 
     const [board, lists, cards] = await Promise.all([
-        t.board('name'),
+        t.board('id', 'name'),
         t.lists('id', 'name'),
         t.cards('id', 'name', 'idList')
     ]);
-
-    // Effort within a range is reconstructed from the "Effort updated by..."
-    // audit comments, which are only reachable through the REST API.
-    const token = range ? await EffortLib.getToken(t) : null;
-
-    const effortById = {};
-    try {
-        await Promise.all(cards.map(async (c) => {
-            effortById[c.id] = await EffortLib.resolveCardEffort(t, c.id, range, token);
-        }));
-    } catch (err) {
-        console.error('Board effort report failed:', err);
-        container.innerHTML = `<p style="color:#b04632">Could not build the report: ${err.message}</p>`;
-        return;
-    }
 
     let boardEst = 0, boardAct = 0;
     const sections = [];
     const csvRows = [];
 
-    lists.forEach((list) => {
-        const listCards = cards.filter((c) => c.idList === list.id);
-        let listEst = 0, listAct = 0;
-        const rows = [];
+    try {
+        // With a range, effort is reconstructed from the board's "Effort updated
+        // by..." audit comments in one paginated pass; otherwise it's the current
+        // stored value per card.
+        let byCard = null;
+        if (range) {
+            const token = await EffortLib.getToken(t);
+            byCard = await EffortLib.rangedEffortByCard(board.id, token, range);
+        }
 
-        listCards.forEach((c) => {
-            const eff = effortById[c.id];
-            listEst += eff.estNum;
-            listAct += eff.actNum;
-            rows[rows.length] = `<tr><td>${c.name}</td><td>${eff.estDisplay}</td><td>${eff.actDisplay}</td></tr>`;
-            csvRows[csvRows.length] = [list.name, c.name, eff.estDisplay || 0, eff.actDisplay || 0];
+        const effortById = {};
+        await Promise.all(cards.map(async (c) => {
+            effortById[c.id] = range
+                ? EffortLib.deltaToEffort(byCard[c.id])
+                : await EffortLib.currentEffort(t, c.id);
+        }));
+
+        lists.forEach((list) => {
+            const listCards = cards.filter((c) => c.idList === list.id);
+            let listEst = 0, listAct = 0;
+            const rows = [];
+
+            listCards.forEach((c) => {
+                const eff = effortById[c.id];
+                listEst += eff.estNum;
+                listAct += eff.actNum;
+                rows[rows.length] = `<tr><td>${c.name}</td><td>${eff.estDisplay}</td><td>${eff.actDisplay}</td></tr>`;
+                csvRows[csvRows.length] = [list.name, c.name, eff.estDisplay || 0, eff.actDisplay || 0];
+            });
+
+            boardEst += listEst;
+            boardAct += listAct;
+
+            sections[sections.length] =
+                `<h4>${list.name} <span class="muted">(est ${listEst} / act ${listAct})</span></h4>
+                 <table border="1" cellspacing="0" cellpadding="4">
+                   <thead><tr><th>Card</th><th>Estimate</th><th>Actual</th></tr></thead>
+                   <tbody>${rows.join('') || '<tr><td colspan="3" class="muted">No cards</td></tr>'}</tbody>
+                 </table>`;
         });
-
-        boardEst += listEst;
-        boardAct += listAct;
-
-        sections[sections.length] =
-            `<h4>${list.name} <span class="muted">(est ${listEst} / act ${listAct})</span></h4>
-             <table border="1" cellspacing="0" cellpadding="4">
-               <thead><tr><th>Card</th><th>Estimate</th><th>Actual</th></tr></thead>
-               <tbody>${rows.join('') || '<tr><td colspan="3" class="muted">No cards</td></tr>'}</tbody>
-             </table>`;
-    });
+    } catch (err) {
+        console.error('Board effort report failed:', err);
+        container.innerHTML = `<p style="color:#b04632">Could not build the report: ${err.message}</p>`;
+        return;
+    }
 
     const title = range
         ? `${board.name} - Effort Summary (${range.fromLabel} to ${range.toLabel})`

@@ -22,16 +22,22 @@ async function renderReport(fromStr, toStr) {
     const range = EffortLib.parseRange(fromStr, toStr);
     container.textContent = 'Loading...';
 
-    const list = await t.list('all');
-
-    // Effort within a range is reconstructed from the "Effort updated by..."
-    // audit comments, which are only reachable through the REST API.
-    const token = range ? await EffortLib.getToken(t) : null;
+    const [list, board] = await Promise.all([t.list('all'), t.board('id')]);
 
     let totalEst = 0, totalAct = 0, rows = [], csvRows = [];
     try {
+        // With a range, effort is reconstructed from the "Effort updated by..."
+        // audit comments (REST API); otherwise it's the current stored value.
+        let byCard = null;
+        if (range) {
+            const token = await EffortLib.getToken(t);
+            byCard = await EffortLib.rangedEffortByCard(board.id, token, range);
+        }
+
         await Promise.all(list.cards.map(async (c) => {
-            const eff = await EffortLib.resolveCardEffort(t, c.id, range, token);
+            const eff = range
+                ? EffortLib.deltaToEffort(byCard[c.id])
+                : await EffortLib.currentEffort(t, c.id);
             totalEst += eff.estNum;
             totalAct += eff.actNum;
             rows[rows.length] = `<tr><td>${c.name}</td><td>${eff.estDisplay}</td><td>${eff.actDisplay}</td></tr>`;
