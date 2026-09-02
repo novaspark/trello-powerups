@@ -112,6 +112,11 @@ var EffortLib = (function () {
         return isNaN(n) ? 0 : n;
     }
 
+    // Trims floating-point noise from summed effort (0.1 + 0.2 etc).
+    function round2(n) {
+        return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+    }
+
     // Shapes a { est, act } delta (or missing) into the same fields as currentEffort().
     function deltaToEffort(delta) {
         var d = delta || { est: 0, act: 0 };
@@ -139,6 +144,7 @@ var EffortLib = (function () {
         currentEffort: currentEffort,
         rangedEffortByCard: rangedEffortByCard,
         deltaToEffort: deltaToEffort,
+        round2: round2,
         downloadCsv: downloadCsv
     };
 })();

@@ -1,0 +1,29 @@
+/* Shared styling for the effort report views. */
+.range-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 6px 0 12px 0;
+}
+
+.range-controls .field {
+    display: flex;
+    flex-direction: column;
+}
+
+.range-controls label {
+    font-size: 12px;
+    margin-bottom: 2px;
+}
+
+.range-controls input {
+    width: 130px;
+    height: 32px;
+    box-sizing: border-box;
+}
+
+.range-controls button {
+    height: 32px;
+    box-sizing: border-box;
+}

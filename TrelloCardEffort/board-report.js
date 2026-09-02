@@ -58,15 +58,17 @@ async function renderReport(fromStr, toStr) {
                 const eff = effortById[c.id];
                 listEst += eff.estNum;
                 listAct += eff.actNum;
-                rows[rows.length] = `<tr><td>${c.name}</td><td>${eff.estDisplay}</td><td>${eff.actDisplay}</td></tr>`;
-                csvRows[csvRows.length] = [list.name, c.name, eff.estDisplay || 0, eff.actDisplay || 0];
+                const estCell = range ? EffortLib.round2(eff.estDisplay) : eff.estDisplay;
+                const actCell = range ? EffortLib.round2(eff.actDisplay) : eff.actDisplay;
+                rows[rows.length] = `<tr><td>${c.name}</td><td>${estCell}</td><td>${actCell}</td></tr>`;
+                csvRows[csvRows.length] = [list.name, c.name, estCell || 0, actCell || 0];
             });
 
             boardEst += listEst;
             boardAct += listAct;
 
             sections[sections.length] =
-                `<h4>${list.name} <span class="muted">(est ${listEst} / act ${listAct})</span></h4>
+                `<h4>${list.name} <span class="muted">(est ${EffortLib.round2(listEst)} / act ${EffortLib.round2(listAct)})</span></h4>
                  <table border="1" cellspacing="0" cellpadding="4">
                    <thead><tr><th>Card</th><th>Estimate</th><th>Actual</th></tr></thead>
                    <tbody>${rows.join('') || '<tr><td colspan="3" class="muted">No cards</td></tr>'}</tbody>
@@ -85,8 +87,8 @@ async function renderReport(fromStr, toStr) {
     container.innerHTML =
         `<h3>${title}</h3>
          <p>
-           <strong>Board total estimated:</strong> ${boardEst} hours<br>
-           <strong>Board total actual:</strong> ${boardAct} hours
+           <strong>Board total estimated:</strong> ${EffortLib.round2(boardEst)} hours<br>
+           <strong>Board total actual:</strong> ${EffortLib.round2(boardAct)} hours
          </p>
          <button id="exportCsv">Export to CSV</button>
          ${sections.join('')}`;

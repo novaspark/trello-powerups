@@ -10,7 +10,7 @@ window.TrelloPowerUp.initialize({
                     title: "Board effort report",
                     url: './board-report.html',
                     fullscreen: false,
-                    accentColor: 'blue'
+                    accentColor: '#17B8B2'
                 });
             }
         }];

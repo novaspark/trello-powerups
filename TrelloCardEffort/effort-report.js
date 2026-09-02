@@ -40,8 +40,10 @@ async function renderReport(fromStr, toStr) {
                 : await EffortLib.currentEffort(t, c.id);
             totalEst += eff.estNum;
             totalAct += eff.actNum;
-            rows[rows.length] = `<tr><td>${c.name}</td><td>${eff.estDisplay}</td><td>${eff.actDisplay}</td></tr>`;
-            csvRows[csvRows.length] = [c.name, eff.estDisplay || 0, eff.actDisplay || 0];
+            const estCell = range ? EffortLib.round2(eff.estDisplay) : eff.estDisplay;
+            const actCell = range ? EffortLib.round2(eff.actDisplay) : eff.actDisplay;
+            rows[rows.length] = `<tr><td>${c.name}</td><td>${estCell}</td><td>${actCell}</td></tr>`;
+            csvRows[csvRows.length] = [c.name, estCell || 0, actCell || 0];
         }));
     } catch (err) {
         console.error('Effort report failed:', err);
@@ -57,8 +59,8 @@ async function renderReport(fromStr, toStr) {
     container.innerHTML =
         `<h3>${title}</h3>
         <p>
-          <strong>Total Estimated:</strong> ${totalEst} hours<br>
-          <strong>Total Actual:</strong> ${totalAct} hours
+          <strong>Total Estimated:</strong> ${EffortLib.round2(totalEst)} hours<br>
+          <strong>Total Actual:</strong> ${EffortLib.round2(totalAct)} hours
         </p>
         <table border="1" cellspacing="0" cellpadding="4">
           <thead><tr><th>Card</th><th>Estimate</th><th>Actual</th></tr></thead>
